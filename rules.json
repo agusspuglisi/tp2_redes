@@ -1,0 +1,15 @@
+[
+  {
+    "src_ip": "10.0.0.2",
+    "dst_ip": "10.0.0.1",
+    "protocol": "TCP",
+    "dst_port": 5201,
+    "action": "allow"
+  },
+  {
+    "src_ip": "10.0.0.2",
+    "dst_ip": "10.0.0.1",
+    "protocol": "ICMP",
+    "action": "deny"
+  }
+]
