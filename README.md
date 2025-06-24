@@ -62,3 +62,64 @@ sudo mn --custom topo/topologia.py --topo chain,3 --mac --arp --controller=remot
 ```bash
 pingall
 ```
+
+## Como ejecutar el firewall avanzado
+
+Este controlador aplica reglas de filtrado a partir del archivo rules.json ubicado en la raíz del proyecto.
+Permite bloquear o permitir tráfico basado en IPs, protocolos (ICMP/TCP), y puerto destino (para TCP).
+
+Pasos para correrlo
+
+1. Copiar el archivo del controlador avanzado:
+
+```bash
+cp controller/firewall.py pox/pox/ext/firewall.py
+```
+
+2. Verificar que rules.json esté en la raíz del proyecto (donde se ejecuta POX).
+El archivo debe tener reglas como:
+
+```json
+[
+  {
+    "src_ip": "10.0.0.2",
+    "dst_ip": "10.0.0.1",
+    "protocol": "ICMP",
+    "action": "deny"
+  },
+  {
+    "src_ip": "10.0.0.2",
+    "dst_ip": "10.0.0.1",
+    "protocol": "TCP",
+    "dst_port": 5201,
+    "action": "allow"
+  }
+]
+```
+
+3. Ejecutar POX desde su carpeta raiz:
+
+```bash
+cd pox
+./pox.py log.level --DEBUG ext.firewall
+```
+
+4. Levantar Mininet desde otra terminal:
+
+```bash
+sudo mn --custom topo/topologia.py --topo chain,3 --mac --arp --controller=remote
+```
+
+5. Probar conectividad:
+
+```bash
+pingall
+```
+
+6. Probar trafico permitido con iperf3 (si se configuro una regla TCP permitida):
+
+```bash
+# En la CLI de Mininet
+h1 iperf3 -s -D
+h2 iperf3 -c 10.0.0.1
+```
