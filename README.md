@@ -13,15 +13,15 @@ Este proyecto requiere [POX](https://github.com/noxrepo/pox) como controlador SD
 
 ## Cómo ejecutar la topología parametrizable
 
-Para lanzar la topología en cadena implementada en `topo/topologia.py`, usá el siguiente comando desde la raíz del proyecto:
+Para lanzar la topología en cadena implementada en `topology.py`, usá el siguiente comando desde la raíz del proyecto:
 
 ```bash
-sudo mn --custom topo/topologia.py --topo chain,5 --mac --arp
+sudo mn --custom topology.py --topo chain,5 --mac --arp
 ```
 
 ### ¿Qué hace cada parte del comando?
 
-- `--custom topo/topologia.py`: le indica a Mininet que use nuestro archivo Python personalizado para definir la topología.
+- `--custom topology.py`: le indica a Mininet que use nuestro archivo Python personalizado para definir la topología.
 
 - `--topo chain,5`: usa la topología llamada `chain` con 5 switches conectados en cadena. Podés cambiar el número (`5`) por cualquier cantidad de switches que quieras probar.
 
@@ -36,7 +36,7 @@ sudo mn --custom topo/topologia.py --topo chain,5 --mac --arp
 El archivo controller/firewall.py debe estar ubicado en pox/pox/ext/. Copialo con:
 
 ```bash
-cp controller/firewall.py pox/pox/ext/firewall.py
+cp firewall.py pox/pox/ext/firewall.py
 ```
 Si ya se habia copiado antes, asegurase de que sea la versión más reciente.
 
@@ -48,13 +48,13 @@ cd pox
 2. Ejecutá el controlador desde POX:
 
 ```bash
-./pox.py log.level --DEBUG ext.firewall
+./pox.py samples.pretty_log log.level --DEBUG forwarding.l2_learning firewall
 ```
 
 3. En otra terminal, levantá Mininet con el controlador remoto:
 
 ```bash
-sudo mn --custom topo/topologia.py --topo chain,3 --mac --arp --controller=remote
+sudo mn --custom topology.py --topo chain,3 --mac --arp --controller=remote
 ```
 
 4. En la CLI de Mininet, probá conectividad:
@@ -73,7 +73,7 @@ Pasos para correrlo
 1. Copiar el archivo del controlador avanzado:
 
 ```bash
-cp controller/firewall.py pox/pox/ext/firewall.py
+cp firewall.py pox/pox/ext/firewall.py
 ```
 
 2. Verificar que rules.json esté en la raíz del proyecto (donde se ejecuta POX).
@@ -101,13 +101,13 @@ El archivo debe tener reglas como:
 
 ```bash
 cd pox
-./pox.py log.level --DEBUG ext.firewall
+./pox.py samples.pretty_log log.level --DEBUG forwarding.l2_learning firewall
 ```
 
 4. Levantar Mininet desde otra terminal:
 
 ```bash
-sudo mn --custom topo/topologia.py --topo chain,3 --mac --arp --controller=remote
+sudo mn --custom topology.py --topo chain,3 --mac --arp --controller=remote
 ```
 
 5. Probar conectividad:
@@ -120,6 +120,6 @@ pingall
 
 ```bash
 # En la CLI de Mininet
-h1 iperf3 -s -D
-h2 iperf3 -c 10.0.0.1
+h1 iperf -s -D
+h2 iperf -c 10.0.0.1
 ```

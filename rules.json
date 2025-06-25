@@ -1,15 +1,29 @@
 [
-  {
-    "src_ip": "10.0.0.2",
-    "dst_ip": "10.0.0.1",
-    "protocol": "TCP",
-    "dst_port": 5201,
-    "action": "allow"
-  },
-  {
-    "src_ip": "10.0.0.2",
-    "dst_ip": "10.0.0.1",
-    "protocol": "ICMP",
-    "action": "deny"
-  }
+    {
+        "description": "Block all traffic to port 80 (HTTP)",
+        "dst_port": 80,
+        "protocol": "any",
+        "action": "deny"
+    },
+    {
+        "description": "Block UDP traffic from host 1 to port 5001",
+        "src_ip": "10.0.0.1",
+        "dst_port": 5001,
+        "protocol": "UDP",
+        "action": "deny"
+    },
+    {
+        "description": "Block all communication from h1 to h3",
+        "src_ip": "10.0.0.1",
+        "dst_ip": "10.0.0.3",
+        "protocol": "any",
+        "action": "deny"
+    },
+    {
+        "description": "Block all communication from h3 to h1",
+        "src_ip": "10.0.0.3",
+        "dst_ip": "10.0.0.1",
+        "protocol": "any",
+        "action": "deny"
+    }
 ]
