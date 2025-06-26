@@ -11,7 +11,12 @@
         "action": "deny"
     },
     {
-        "host_a": "10.0.0.2",
+        "host_a": "10.0.0.3",
+        "host_b": "10.0.0.4",
+        "action": "deny"
+    },
+    {
+        "host_a": "10.0.0.4",
         "host_b": "10.0.0.3",
         "action": "deny"
     }
