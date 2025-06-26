@@ -48,7 +48,7 @@ cd pox
 2. Ejecutá el controlador desde POX:
 
 ```bash
-./pox.py log.level --DEBUG ext.firewall
+./pox.py log.level --DEBUG openflow.of_01 ext.firewall
 ```
 
 3. En otra terminal, levantá Mininet con el controlador remoto:

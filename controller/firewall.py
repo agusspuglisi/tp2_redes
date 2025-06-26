@@ -59,18 +59,26 @@ class Firewall(EventMixin):
                 pkt_port = tcp_pkt.dstport if tcp_pkt else (udp_pkt.dstport if udp_pkt else None)
                 if pkt_port == 80:   # coincide realmente
                     action = rule["action"]
-                    log.debug("Regla 1puerto 80 aplicada: %s", rule)
+                    log.debug("Regla delpuerto 80 aplicada: %s", rule)
                     break
 
             # ---------------- Regla 2 : UDP h1 → puerto 5001 ----------------
             if rule.get("protocol", "").lower() == "udp" and udp_pkt:
-                if udp_pkt.dstport == rule.get("dst_port") and ip_pkt and \
-                   str(ip_pkt.srcip) == rule.get("src_host"):
-                    action = rule["action"]
-                    log.debug("Regla 2 UDP h1 → puerto 5001 aplicada: %s", rule)
-                    break
+                if (udp_pkt.dstport == rule.get("dst_port") and ip_pkt and
+                    str(ip_pkt.srcip) == rule.get("src_host")):
+                    fm = of.ofp_flow_mod()
+                    fm.match.dl_type   = 0x0800            # IPv4
+                    fm.match.nw_proto  = 17                # UDP
+                    fm.match.nw_src    = ip_pkt.srcip      # 10.0.0.1
+                    fm.match.nw_dst    = ip_pkt.dstip      # 10.0.0.3
+                    fm.match.tp_src    = udp_pkt.srcport   # cliente efímero
+                    fm.match.tp_dst    = udp_pkt.dstport   # 5001
 
-        # ------------------------------------------------------------------
+                    event.connection.send(fm)
+                    log.info("Instalado flujo de DROP para UDP %s:%s → %s:%s", ip_pkt.srcip, udp_pkt.srcport, ip_pkt.dstip, udp_pkt.dstport)
+
+                    return
+
         if action == "deny":
             # Inserta regla(s) de drop en el switch.
             def send_drop(src, dst):
@@ -89,7 +97,7 @@ class Firewall(EventMixin):
                 # Bloqueo unidireccional (Reglas 1 y 2)
                 send_drop(eth.src, eth.dst)
                 log.info("Bloqueo unidireccional desde %s hacia %s", eth.src, eth.dst)
-            return  # paquete descartado
+            return 
 
         # Enviar normalmente (flood simple)
         msg = of.ofp_packet_out(data=event.ofp, in_port=event.port)
