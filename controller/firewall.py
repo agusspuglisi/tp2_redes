@@ -15,6 +15,7 @@ class Firewall(EventMixin):
     def __init__(self):
         self.listenTo(core.openflow)
         self.rules = self.load_rules()
+        self.mac_to_port = {}
         log.info("Firewall avanzado iniciado")
 
     def load_rules(self):
@@ -35,6 +36,13 @@ class Firewall(EventMixin):
         eth = packet.find(ethernet)
         if not eth:
             return  # No Ethernet ⇒ ignorar
+        
+        dpid = event.connection.dpid
+
+        if dpid not in self.mac_to_port:
+            self.mac_to_port[dpid] = {}
+        # Actualiza la tabla de direcciones MAC
+        self.mac_to_port[dpid][eth.src] = event.port
 
         ip_pkt  = packet.find(ipv4) or packet.find(ipv6)
         tcp_pkt = packet.find(tcp)
@@ -71,7 +79,7 @@ class Firewall(EventMixin):
                     fm.match.nw_proto  = 17                # UDP
                     fm.match.nw_src    = ip_pkt.srcip      # 10.0.0.1
                     fm.match.nw_dst    = ip_pkt.dstip      # 10.0.0.3
-                    fm.match.tp_src    = udp_pkt.srcport   # cliente efímero
+                    fm.match.tp_src    = udp_pkt.srcport
                     fm.match.tp_dst    = udp_pkt.dstport   # 5001
 
                     event.connection.send(fm)
@@ -99,10 +107,20 @@ class Firewall(EventMixin):
                 log.info("Bloqueo unidireccional desde %s hacia %s", eth.src, eth.dst)
             return 
 
-        # Enviar normalmente (flood simple)
-        msg = of.ofp_packet_out(data=event.ofp, in_port=event.port)
-        msg.actions.append(of.ofp_action_output(port=of.OFPP_FLOOD))
-        event.connection.send(msg)
+        dst_mac = eth.dst
+        if dst_mac in self.mac_to_port[dpid]:
+            out_port = self.mac_to_port[dpid][dst_mac]
+
+            fm = of.ofp_flow_mod()
+            fm.match = of.ofp_match.from_packet(packet, event.port)
+            fm.actions.append(of.ofp_action_output(port=out_port))
+            event.connection.send(fm)
+            log.debug("Forwarding %s → %s por puerto %s", eth.src, dst_mac, out_port)
+        else:
+            # aSi no conoazco la MAC destino
+            po = of.ofp_packet_out(data=event.ofp, in_port=event.port)
+            po.actions.append(of.ofp_action_output(port=of.OFPP_FLOOD))
+            event.connection.send(po)
 
 def launch():
     core.registerNew(Firewall)
