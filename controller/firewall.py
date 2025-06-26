@@ -6,6 +6,7 @@ from pox.lib.packet.ipv4 import ipv4
 from pox.lib.packet.tcp import tcp
 from pox.lib.packet.udp import udp
 from pox.lib.packet.icmp import icmp
+from pox.lib.packet.ipv6 import ipv6
 import json
 import os
 
@@ -40,30 +41,54 @@ class Firewall(EventMixin):
         log.debug("PacketIn recibido en switch %s (puerto %s)", dpid, in_port)
 
         eth = packet.find(ethernet)
-        ip = packet.find(ipv4)
 
-        if not ip:
+        if not eth:
+            return  # No es un paquete Ethernet, ignorar
+        
+        src_mac = str(eth.src)
+        dst_mac = str(eth.dst)
+
+        ip_pkt = packet.find(ipv4) or packet.find(ipv6)
+        if not ip_pkt:
             log.debug("Paquete no es IP, se ignora.")
             return
+        
+        tcp_pkt = packet.find(tcp)
+        udp_pkt = packet.find(udp)
 
-        src_ip = str(ip.srcip)
-        dst_ip = str(ip.dstip)
-        proto = ip.protocol  # 1: ICMP, 6: TCP, 17: UDP
-        action_taken = None
+        action = "allow"  # Acción por defecto
 
         for rule in self.rules:
-            if rule["src_ip"] == src_ip and rule["dst_ip"] == dst_ip:
-                if rule["protocol"] == "ICMP" and proto == ipv4.ICMP_PROTOCOL:
-                    action_taken = rule["action"]
+            # Regla de bloqueo total entre hosts específicos (por IP)
+            if "host_a" in rule and "host_b" in rule:
+                hosts = [rule["host_a"], rule["host_b"]]
+                if ip_pkt and (str(ip_pkt.srcip) in hosts and str(ip_pkt.dstip) in hosts):
+                    action = rule["action"]
+                    log.debug("Regla bloque total aplicada: %s", rule)
+                    log.debug("Hosts involucrados: %s", hosts)
                     break
-                if rule["protocol"] == "TCP" and proto == ipv4.TCP_PROTOCOL:
-                    tcp_seg = packet.find(tcp)
-                    if tcp_seg and rule.get("dst_port") == tcp_seg.dstport:
-                        action_taken = rule["action"]
-                        break
+            # Bloqueo puerto destino 80
+            elif rule.get("dst_port") == 80 and (tcp_pkt or udp_pkt):
+                action = rule["action"]
+                log.debug("Regla puerto 80 aplicada: %s", rule)
+                log.debug("Hosts involucrados: %s", hosts)
+                break
+            # Bloqueo UDP de host específico hacia puerto 5001
+            elif udp_pkt and rule.get("protocol") == "udp" and rule.get("dst_port") == udp_pkt.dstport:
+                if (str(ip_pkt.srcip) == rule.get("src_host") and udp_pkt.dstport == rule.get("dst_port")):
+                    action = rule["action"]
+                    log.debug("Regla aplicada: %s", rule)
+                    log.debug("Hosts involucrados: %s", hosts)
+                    break
 
-        if action_taken == "deny":
-            log.info("Tráfico bloqueado: %s -> %s (%s)", src_ip, dst_ip, rule["protocol"])
+        if action == "deny":
+            log.info("Insertando regla de bloqueo MAC en switch")
+            msg = of.ofp_flow_mod()
+            msg.match.dl_src = eth.src
+            msg.match.dl_dst = eth.dst
+            msg.actions = []  
+            event.connection.send(msg)
+            log.info("Tráfico bloqueado desde %s hacia %s (MAC)", src_mac, dst_mac)
             return
 
         # Por defecto o si es "allow"
@@ -75,3 +100,6 @@ class Firewall(EventMixin):
 
 def launch():
     core.registerNew(Firewall)
+
+# iperf -s -u -p 5001
+# iperf -c 10.0.0.2 -u -p 5001

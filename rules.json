@@ -1,15 +1,18 @@
 [
-  {
-    "src_ip": "10.0.0.2",
-    "dst_ip": "10.0.0.1",
-    "protocol": "TCP",
-    "dst_port": 5201,
-    "action": "allow"
-  },
-  {
-    "src_ip": "10.0.0.2",
-    "dst_ip": "10.0.0.1",
-    "protocol": "ICMP",
-    "action": "deny"
-  }
+    {
+        "protocol": "ANY",
+        "dst_port": 80,
+        "action": "deny"
+    },
+    {
+        "protocol": "udp",
+        "src_host": "10.0.0.1",
+        "dst_port": 5001,
+        "action": "deny"
+    },
+    {
+        "host_a": "10.0.0.2",
+        "host_b": "10.0.0.3",
+        "action": "deny"
+    }
 ]
